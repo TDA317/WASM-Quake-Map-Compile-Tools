@@ -384,7 +384,7 @@ PrintOptions(void)
 	   "   sourcefile      .MAP file to process\n"
 	   "   destfile        .BSP file to output\n");
 
-    exit(1);
+    Error("Invalid arguments. Use -? or -help for options.");
 }
 
 
