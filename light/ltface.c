@@ -405,17 +405,18 @@ CalcFaceExtents(const bsp2_dface_t *face, const vec3_t offset,
 	maxs[i] = ceil(maxs[i] / 16);
 	surf->texmins[i] = mins[i];
 	surf->texsize[i] = maxs[i] - mins[i];
-	if (surf->texsize[i] > 17) {
-	    const dplane_t *plane = bsp->dplanes + face->planenum;
-	    const int offset = bsp->dtexdata.header->dataofs[tex->miptex];
-	    const miptex_t *miptex = (const miptex_t *)(bsp->dtexdata.base + offset);
-	    Error("Bad surface extents:\n"
-		  "   surface %d, %s extents = %d\n"
-		  "   texture %s at (%s)\n"
-		  "   surface normal (%s)\n",
-		  (int)(face - bsp->dfaces), i ? "t" : "s", surf->texsize[i],
-		  miptex->name, VecStr(worldpoint), VecStrf(plane->normal));
-	}
+    if (surf->texsize[i] > 17) {
+        const dplane_t *plane = bsp->dplanes + face->planenum;
+        const int offset = bsp->dtexdata.header->dataofs[tex->miptex];
+        const miptex_t *miptex = (const miptex_t *)(bsp->dtexdata.base + offset);
+        // Emit a warning instead of aborting. Clamp the texsize to avoid later crashes.
+        logprint("WARNING: Bad surface extents: surface %d, %s extents = %d (clamped)\n",
+                 (int)(face - bsp->dfaces), i ? "t" : "s", surf->texsize[i]);
+        logprint("   texture %s at (%s)\n", miptex->name, VecStr(worldpoint));
+        logprint("   surface normal (%s)\n", VecStrf(plane->normal));
+        // Clamp the size to a safe maximum (17) to avoid downstream buffer/loop overflows
+        surf->texsize[i] = 17;
+    }
     }
 }
 

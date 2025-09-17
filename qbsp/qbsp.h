@@ -453,6 +453,7 @@ typedef struct options_s {
     char szMapName[512];
     char szBSPName[512];
     char wadPath[512];
+    char szOverrideWad[1024]; /* WAD files passed from UI */
 } options_t;
 
 extern options_t options;

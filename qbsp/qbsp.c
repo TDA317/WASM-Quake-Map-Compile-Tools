@@ -312,13 +312,18 @@ ProcessFile(void)
     }
 
     wadlist = NULL;
-    wadstring = ValueForKey(pWorldEnt, "_wad");
-    if (!wadstring[0])
-	wadstring = ValueForKey(pWorldEnt, "wad");
-    if (!wadstring[0])
-	Message(msgWarning, warnNoWadKey);
-    else
-	wadlist = WADList_Init(wadstring);
+    if (options.szOverrideWad[0]) {
+        Message(msgLiteral, "Using WAD files from UI override.");
+        wadlist = WADList_Init(options.szOverrideWad);
+    } else {
+        wadstring = ValueForKey(pWorldEnt, "_wad");
+        if (!wadstring[0])
+	    wadstring = ValueForKey(pWorldEnt, "wad");
+        if (!wadstring[0])
+	    Message(msgWarning, warnNoWadKey);
+        else
+	    wadlist = WADList_Init(wadstring);
+    }
 
     if (!wadlist) {
 	if (wadstring[0])
@@ -384,7 +389,7 @@ PrintOptions(void)
 	   "   sourcefile      .MAP file to process\n"
 	   "   destfile        .BSP file to output\n");
 
-    exit(1);
+    Error("Invalid arguments. Use -? or -help for options.");
 }
 
 
@@ -522,6 +527,12 @@ ParseOptions(char *szOptions)
 		/* Remove trailing /, if any */
 		if (options.wadPath[strlen(options.wadPath) - 1] == '/')
 		    options.wadPath[strlen(options.wadPath) - 1] = 0;
+	    } else if (!strcasecmp(szTok, "override_wad")) {
+		szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
+		if (!szTok2)
+		    Error("Invalid argument to option %s", szTok);
+		strcpy(options.szOverrideWad, szTok2);
+		szTok = szTok2;
 	    } else if (!strcasecmp(szTok, "?") || !strcasecmp(szTok, "help"))
 		PrintOptions();
 	    else
@@ -549,14 +560,16 @@ InitQBSP(int argc, char **argv)
     options.dxSubdivide = 240;
     options.fVerbose = true;
     options.szMapName[0] = options.szBSPName[0] = options.wadPath[0] = 0;
+    options.szOverrideWad[0] = 0;
 
-    length = LoadFile("qbsp.ini", &szBuf, false);
-    if (length) {
-	Message(msgLiteral, "Loading options from qbsp.ini\n");
-	ParseOptions(szBuf);
+    // Disabled for WebAssembly version to prevent conflicts with UI options.
+    // length = LoadFile("qbsp.ini", &szBuf, false);
+    // if (length) {
+	//     Message(msgLiteral, "Loading options from qbsp.ini\n");
+	//     ParseOptions(szBuf);
 
-	FreeMem(szBuf, OTHER, length + 1);
-    }
+	//     FreeMem(szBuf, OTHER, length + 1);
+    // }
 
     // Concatenate command line args
     length = 1;
@@ -637,6 +650,7 @@ int
 main(int argc, char **argv)
 {
     double start, end;
+    int i;
 
     Message(msgScreen, IntroString);
 

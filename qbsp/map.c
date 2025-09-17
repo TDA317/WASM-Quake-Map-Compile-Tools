@@ -646,19 +646,19 @@ PreParseFile(const char *buf)
     // Very simple... we just want numbers here.  Invalid formats are
     // detected later.  Problems with deviant .MAP formats.
     while (*buf != 0) {
-	if (*buf == '\"') {
-	    buf++;
-	    // Quoted string... skip to end of quote
-	    while (*buf != '\"' && *buf)
-		buf++;
-	    if (!*buf)
-		break;
-	} else if (*buf == '/' && *(buf + 1) == '/') {
-	    // Comment... skip to end of line
-	    while (*buf != '\n' && *buf)
-		buf++;
-	    if (!*buf)
-		break;
+        if (*buf == '"') {
+            buf++;
+            // Quoted string... skip to end of quote
+            while (*buf != '"' && *buf)
+                buf++;
+            if (!*buf)
+                break;
+        } else if (*buf == '/' && *(buf + 1) == '/') {
+            // Comment... skip to end of line
+            while (*buf != '\n' && *buf)
+                buf++;
+            if (!*buf)
+                break;
 	} else if (*buf == '{' && (isspace(buf[1]) || !buf[1])) {
 	    if (braces == 0)
 		map.maxentities++;
@@ -802,10 +802,10 @@ LoadMapFile(void)
     }
 
     /*
-     * map.maxplanes*3 because of 3 hulls, then add 20% as a fudge factor for
-     * hull edge bevel planes
+     * map.maxplanes*3 because of 3 hulls, then add 100% as a fudge factor for
+     * hull edge bevel planes and other complex geometry.
      */
-    map.maxplanes = 3 * map.maxplanes + map.maxplanes / 5;
+    map.maxplanes = 3 * map.maxplanes + map.maxplanes;
     map.planes = AllocMem(PLANE, map.maxplanes, true);
 
     Message(msgStat, "%8d faces", map.numfaces);
