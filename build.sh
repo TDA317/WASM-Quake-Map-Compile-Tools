@@ -51,31 +51,3 @@ emcc \
 
 echo "Build complete. Output files: qbsp.js, qbsp.wasm"
 
-echo "Building light for WebAssembly..."
-
-emcc \
-  -O3 \
-  -o light.js \
-  -s MODULARIZE=1 \
-  -s EXPORT_NAME="createLightModule" \
-  -I. \
-  -Iinclude \
-  -s EXPORTED_FUNCTIONS="['_main', '_malloc', '_free']" \
-  -s EXPORTED_RUNTIME_METHODS="['FS','callMain']" \
-  -s ALLOW_MEMORY_GROWTH=1 \
-  -s TOTAL_STACK=16777216 \
-  -s INITIAL_MEMORY=67108864 \
-  -s INVOKE_RUN=0 \
-  -s NO_EXIT_RUNTIME=1 \
-  -DDOUBLEVEC_T \
-  -Wno-implicit-function-declaration \
-  -Wno-implicit-int \
-  -Wno-return-type \
-  common/log.c \
-  light/light.c \
-  light/entities.c \
-  light/litfile.c \
-  light/ltface.c \
-  light/trace.c
-
-echo "Build complete. Output files: light.js, light.wasm"

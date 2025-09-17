@@ -272,6 +272,10 @@ RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
 
 #endif /* USE_PTHREADS */
 
+/* single-thread fallback is implemented further down (SINGLE THREAD section)
+ * to avoid duplicating definitions when neither WIN32 nor PTHREADS is selected.
+ */
+
 /*
  * =======================================================================
  *                                SINGLE THREAD
@@ -300,6 +304,13 @@ RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
     func(arg);
 
     logprint("\n");
+}
+
+int
+GetDefaultThreads(void)
+{
+    /* single-thread fallback */
+    return 1;
 }
 
 #endif

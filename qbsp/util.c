@@ -205,21 +205,11 @@ FreeAllMem(void)
 /* Keep track of output state */
 static bool fInPercent = false;
 
-void
-Error(const char *error, ...)
-{
-    va_list argptr;
-
-    /* Using lockless prints so we can error out while holding the lock */
-    InterruptThreadProgress__();
-    logprint_locked__("************ ERROR ************\n");
-
-    va_start(argptr, error);
-    logvprint(error, argptr);
-    va_end(argptr);
-    logprint_locked__("\n");
-    exit(1);
-}
+/* NOTE: Error() is provided centrally by common/cmdlib.c. Do not define
+ * another global Error() here — that causes duplicate symbol errors when
+ * linking multiple tools into the same binary (e.g., light). Use the
+ * prototype from headers and the canonical implementation.
+ */
 
 /*
 =================

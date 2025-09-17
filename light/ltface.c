@@ -284,10 +284,13 @@ CreateFaceTransform(const bsp2_dface_t *face, const bsp2_t *bsp,
 
     /* Decompose the matrix. If we can't, texture axes are invalid. */
     if (!PMatrix3_LU_Decompose(transform)) {
-	const vec_t *p = bsp->dvertexes[bsp->dedges[face->firstedge].v[0]].point;
-	Error("Bad texture axes on face:\n"
-	      "   face point at (%s)\n"
-	      "   face area = %5.3f\n", VecStr(p), FaceArea(face, bsp));
+        /* bsp stores points as float[3] but vec_t may be double; cast
+         * here for compatibility since VecStr reads the data as vec_t.
+         */
+        const vec_t *p = (const vec_t *)bsp->dvertexes[bsp->dedges[face->firstedge].v[0]].point;
+        Error("Bad texture axes on face:\n"
+              "   face point at (%s)\n"
+              "   face area = %5.3f\n", VecStr(p), FaceArea(face, bsp));
     }
 }
 
@@ -386,7 +389,7 @@ CalcFaceExtents(const bsp2_dface_t *face, const vec3_t offset,
 	vert = (edge >= 0) ? bsp->dedges[edge].v[0] : bsp->dedges[-edge].v[1];
 	dvertex = &bsp->dvertexes[vert];
 
-	VectorAdd(dvertex->point, offset, worldpoint);
+    VectorAdd((const vec_t *)dvertex->point, offset, worldpoint);
 	WorldToTexCoord(worldpoint, tex, texcoord);
 	for (j = 0; j < 2; j++) {
 	    if (texcoord[j] < mins[j])
@@ -407,14 +410,38 @@ CalcFaceExtents(const bsp2_dface_t *face, const vec3_t offset,
 	surf->texsize[i] = maxs[i] - mins[i];
     if (surf->texsize[i] > 17) {
         const dplane_t *plane = bsp->dplanes + face->planenum;
-        const int offset = bsp->dtexdata.header->dataofs[tex->miptex];
-        const miptex_t *miptex = (const miptex_t *)(bsp->dtexdata.base + offset);
-        // Emit a warning instead of aborting. Clamp the texsize to avoid later crashes.
+    const int mipofs = bsp->dtexdata.header->dataofs[tex->miptex];
+    const miptex_t *miptex = (const miptex_t *)(bsp->dtexdata.base + mipofs);
+        /* Emit a warning and dump diagnostic data to help track down whether
+         * the face vertex coordinates, texture vectors, or plane data are
+         * corrupted or otherwise out of range. This avoids aborting so the
+         * run can complete and produce a BSP for inspection.
+         */
         logprint("WARNING: Bad surface extents: surface %d, %s extents = %d (clamped)\n",
                  (int)(face - bsp->dfaces), i ? "t" : "s", surf->texsize[i]);
         logprint("   texture %s at (%s)\n", miptex->name, VecStr(worldpoint));
-        logprint("   surface normal (%s)\n", VecStrf(plane->normal));
-        // Clamp the size to a safe maximum (17) to avoid downstream buffer/loop overflows
+        logprint("   surface normal (%s)\n", VecStrf((const vec_t *)plane->normal));
+
+        /* Dump the first few vertices and their computed texture coords so
+         * we can see whether the input vertex positions or the texinfo
+         * transformation are producing absurd values.
+         */
+        for (int v = 0; v < face->numedges && v < 8; v++) {
+            int edge = bsp->dsurfedges[face->firstedge + v];
+            int vert = (edge >= 0) ? bsp->dedges[edge].v[0] : bsp->dedges[-edge].v[1];
+            const dvertex_t *dv = &bsp->dvertexes[vert];
+            vec3_t vworld;
+            vec_t vtex[2];
+
+            VectorAdd((const vec_t *)dv->point, offset, vworld);
+            WorldToTexCoord(vworld, tex, vtex);
+            logprint("    vert %d pos (%s) tex (%0.6g %0.6g)\n",
+                     vert, VecStrf(vworld), (double)vtex[0], (double)vtex[1]);
+        }
+
+        /* Clamp the size to a safe maximum (17) to avoid downstream
+         * buffer/loop overflows while still allowing a BSP to be written.
+         */
         surf->texsize[i] = 17;
     }
     }
@@ -496,9 +523,9 @@ CalcPoints(const dmodel_t *model, const texorg_t *texorg, lightsurf_t *surf)
 		}
 
 		/* Move the point 1 unit above the obstructing surface */
-		dist = DotProduct(point, hit.dplane->normal) - hit.dplane->dist;
+                dist = DotProduct(point, (const vec_t *)hit.dplane->normal) - hit.dplane->dist;
 		dist = hit.side ? -dist - 1 : -dist + 1;
-		VectorScale(hit.dplane->normal, dist, move);
+                VectorScale((const vec_t *)hit.dplane->normal, dist, move);
 		VectorAdd(point, move, point);
 	    }
 	}
@@ -519,7 +546,7 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
 
     /* Set up the plane, including model offset */
     plane = &lightsurf->plane;
-    VectorCopy(bsp->dplanes[face->planenum].normal, plane->normal);
+    VectorCopy((const vec_t *)bsp->dplanes[face->planenum].normal, plane->normal);
     plane->dist = bsp->dplanes[face->planenum].dist;
     VectorScale(plane->normal, plane->dist, planepoint);
     VectorAdd(planepoint, modelinfo->offset, planepoint);

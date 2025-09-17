@@ -166,6 +166,14 @@ function initializeApp() {
             // because the modularized module may not have been initialized here. Only perform
             // FS operations when the worker is not available (fallback path) and Module.FS exists.
             const mapData = new Uint8Array(await mapFile.arrayBuffer());
+            // Normalize filename extension to lowercase so toolchains that append or
+            // compare against ".map" work regardless of the uploaded filename case.
+            const mapNameParts = mapFile.name.split('.');
+            let normalizedMapName = mapFile.name;
+            if (mapNameParts.length > 1) {
+                const ext = mapNameParts.pop();
+                normalizedMapName = mapNameParts.join('.') + '.' + ext.toLowerCase();
+            }
             if (!(qbspWorker && workerReady)) {
                 try {
                     if (Module && Module.FS && Module.FS.analyzePath && Module.FS.analyzePath(workingDir).exists) {
@@ -187,7 +195,7 @@ function initializeApp() {
                 try { if (Module && Module.FS && Module.FS.mkdir) Module.FS.mkdir(workingDir); } catch (e) { /* ignore if exists */ }
 
                 // Write the .map file to the virtual file system for fallback runs
-                try { Module.FS.writeFile(`${workingDir}/${mapFile.name}`, mapData); } catch (e) { Module.printErr('Failed to write map to FS: ' + e); }
+                try { Module.FS.writeFile(`${workingDir}/${normalizedMapName}`, mapData); } catch (e) { Module.printErr('Failed to write map to FS: ' + e); }
             }
 
             // Write any .wad files to the virtual file system.
@@ -244,7 +252,7 @@ function initializeApp() {
             }
             
             // Add filename last.
-            const mapPath = `${workingDir}/${mapFile.name}`;
+            const mapPath = `${workingDir}/${normalizedMapName}`;
             const bspPath = mapPath.replace(/\.map$/i, '.bsp'); // We still need bspPath to find the output file.
             args.push(mapPath);
             
@@ -254,7 +262,7 @@ function initializeApp() {
             if (qbspWorker && workerReady) {
                 try {
                     Module.print('Posting run to worker...');
-                    const msg = { type: 'run', mapName: mapFile.name, mapBuffer: mapData.buffer, wads: [], args: args };
+                    const msg = { type: 'run', mapName: normalizedMapName, mapBuffer: mapData.buffer, wads: [], args: args };
                     const transfers = [ mapData.buffer ];
                     for (const w of wadBuffers) {
                         msg.wads.push({ name: w.name, buf: w.ab });
@@ -351,7 +359,7 @@ function initializeApp() {
             let filesFound = 0;
 
             for (const ext of possibleExtensions) {
-                const outputFileName = mapFile.name.replace(/\.map$/i, ext);
+                const outputFileName = normalizedMapName.replace(/\.map$/i, ext);
                 const outputFilePath = `${workingDir}/${outputFileName}`;
                 try {
                     const ap = Module.FS.analyzePath(outputFilePath);

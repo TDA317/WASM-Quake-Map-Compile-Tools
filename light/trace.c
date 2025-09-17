@@ -49,7 +49,7 @@ MakeTnodes_r(int nodenum, const bsp2_t *bsp)
     tnode->plane = bsp->dplanes + node->planenum;
 
     tnode->type = tnode->plane->type;
-    VectorCopy(tnode->plane->normal, tnode->normal);
+	VectorCopy((const vec_t *)tnode->plane->normal, tnode->normal);
     tnode->dist = tnode->plane->dist;
 
     for (i = 0; i < 2; i++) {

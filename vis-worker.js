@@ -1,11 +1,36 @@
-// light-worker.js - runs the modularized light tool inside a Web Worker and forwards logs
+// vis-worker.js - runs the modularized vis tool inside a Web Worker and forwards logs
 let modulePromise = null;
+let lastDebugFlag = false;
 
-try {
-    importScripts('light.js');
-} catch (e) {
-    // if importScripts fails, we'll still accept init/run messages but report errors
-    console.warn('Could not import light.js in worker:', e);
+async function ensureModule(debug) {
+    if (modulePromise && lastDebugFlag === debug) return modulePromise;
+    // reset
+    modulePromise = null;
+    lastDebugFlag = debug;
+    try {
+        if (debug) {
+            // try debug module first
+            importScripts('vis-debug.js');
+            if (typeof createVisDebugModule === 'function') {
+                modulePromise = createVisDebugModule({ print: (t)=>self.postMessage({type:'log', text:String(t)}), printErr: (t)=>self.postMessage({type:'err', text:String(t)}), noInitialRun: true });
+                return modulePromise;
+            }
+            // fall through to normal
+        }
+    } catch (e) {
+        console.warn('Could not import vis-debug.js in worker:', e);
+    }
+    try {
+        importScripts('vis.js');
+    } catch (e) {
+        console.warn('Could not import vis.js in worker:', e);
+        throw e;
+    }
+    if (typeof createVisModule === 'function') {
+        modulePromise = createVisModule({ print: (t)=>self.postMessage({type:'log', text:String(t)}), printErr: (t)=>self.postMessage({type:'err', text:String(t)}), noInitialRun: true });
+        return modulePromise;
+    }
+    throw new Error('No createVisModule/createVisDebugModule factory found');
 }
 
 function errnoName(errno) {
@@ -21,20 +46,18 @@ self.onmessage = async function(ev) {
     const msg = ev.data;
 
     if (msg.type === 'init') {
-        if (!modulePromise) {
-            modulePromise = createLightModule({
-                print: function(text) { self.postMessage({type:'log', text: String(text)}); },
-                printErr: function(text) { self.postMessage({type:'err', text: String(text)}); },
-                noInitialRun: true
-            });
+        try {
+            await ensureModule(!!msg.debug);
+            self.postMessage({type:'inited'});
+        } catch (e) {
+            self.postMessage({type:'err', text: 'module init failed: '+String(e)});
         }
-        self.postMessage({type:'inited'});
         return;
     }
 
     if (msg.type === 'run') {
         try {
-            const module = await modulePromise;
+            const module = await ensureModule(!!msg.debug);
             const FS = module.FS;
             const working = '/working';
             try { if (FS.analyzePath(working).exists) {
@@ -46,20 +69,17 @@ self.onmessage = async function(ev) {
             }} catch(e){}
             try { FS.mkdir(working); } catch(e){}
 
-            // write inputs if provided (support bspName/bspBuffer or inputName/inputBuffer)
+            // write inputs if provided (BSP + optional PRT)
             const inName = msg.bspName || msg.inputName;
             const inBuf = msg.bspBuffer || msg.inputBuffer;
             if (inName && inBuf) {
                 FS.writeFile(working + '/' + inName, new Uint8Array(inBuf));
             }
-
-            if (msg.wads && msg.wads.length) {
-                for (const w of msg.wads) {
-                    try { FS.writeFile(working + '/' + w.name, new Uint8Array(w.buf)); } catch(e) { self.postMessage({type:'err', text:'Failed to write wad '+w.name+' '+(e.errno?errnoName(e.errno):e)}); }
-                }
+            if (msg.prtName && msg.prtBuffer) {
+                FS.writeFile(working + '/' + msg.prtName, new Uint8Array(msg.prtBuffer));
             }
 
-            // run-ack listing
+            // run-ack
             try {
                 const present = FS.readdir(working).filter(x => x !== '.' && x !== '..');
                 self.postMessage({ type: 'run-ack', files: present });
@@ -71,9 +91,9 @@ self.onmessage = async function(ev) {
             try {
                 module.callMain(args);
 
-                // collect outputs (e.g., .lit, modified bsp)
+                // collect outputs (e.g., .vis, modified bsp)
                 try {
-                    const possible = ['.lit', '.bsp'];
+                    const possible = ['.vis', '.bsp', '.prt'];
                     const baseName = (inName || '').replace(/\.bsp$|\.map$/i, '') || 'output';
                     const files = [];
                     for (const ext of possible) {

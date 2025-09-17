@@ -473,8 +473,13 @@ GetVectorForKey(const entity_t *ent, const char *key, vec3_t vec)
 {
     const char *value;
 
-    value = ValueForKey(ent, key);
-    sscanf(value, "%f %f %f", &vec[0], &vec[1], &vec[2]);
+	value = ValueForKey(ent, key);
+	/* Read into vec_t: use %lf when DOUBLEVEC_T is defined, otherwise %f */
+#ifdef DOUBLEVEC_T
+	sscanf(value, "%lf %lf %lf", &vec[0], &vec[1], &vec[2]);
+#else
+	sscanf(value, "%f %f %f", &vec[0], &vec[1], &vec[2]);
+#endif
 }
 
 static size_t
