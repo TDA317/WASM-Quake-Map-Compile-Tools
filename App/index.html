@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quake Map Compiler</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Quake Map Compiler Suite</h1>
+            <p>A WebAssembly port of the TyrUtils v0.17 toolset.</p>
+            <p class="attribution">
+                Vibecoded by <a href="https://github.com/TDA317" target="_blank" rel="noopener noreferrer">TDA317</a>
+            </p>
+        </header>
+
+        <div class="tab-container">
+            <div class="tab-bar">
+                <button class="tab-button active" data-tab="qbsp-tab">QBSP</button>
+                <button class="tab-button" data-tab="light-tab">LIGHT</button>
+                <button class="tab-button" data-tab="vis-tab">VIS</button>
+                <button class="tab-button" data-tab="bspinfo-tab">BSPInfo</button>
+                <button class="tab-button" data-tab="bsputil-tab">BSPUtil</button>
+                <button class="tab-button" data-tab="full-compile-tab" style="margin-left: auto; color: #28a745;">Full Compile</button>
+            </div>
+            <div class="tab-content">
+                <!-- QBSP Tab -->
+                <div id="qbsp-tab" class="tab-panel active">
+                    <h2>QBSP - BSP Builder</h2>
+                    <div class="tool-controls">
+                        <div class="file-input-group">
+                            <label for="map-file">MAP File:</label>
+                            <input type="file" id="map-file" accept=".map">
+                        </div>
+                        <div class="file-input-group">
+                            <label for="wad-files">WAD Files (optional):</label>
+                            <input type="file" id="wad-files" multiple accept=".wad">
+                        </div>
+                        <div class="options-grid" title="QBSP Options">
+                            <label title="Doesn't perform outside filling."><input type="checkbox" id="option-nofill"> <span>-nofill</span></label>
+                            <label title="Doesn't build clip hulls."><input type="checkbox" id="option-noclip"> <span>-noclip</span></label>
+                            <label title="Doesn't remove faces with the 'skip' texture."><input type="checkbox" id="option-noskip"> <span>-noskip</span></label>
+                            <label title="Only updates .MAP entities."><input type="checkbox" id="option-onlyents"> <span>-onlyents</span></label>
+                            <label title="Print out more .MAP information." checked><input type="checkbox" id="option-verbose"> <span>-verbose</span></label>
+                            <label title="Doesn't combine sky and water faces into one large face."><input type="checkbox" id="option-splitspecial"> <span>-splitspecial</span></label>
+                            <label title="Computes portal information for transparent sky."><input type="checkbox" id="option-transsky"> <span>-transsky</span></label>
+                            <label title="Uses original QBSP texture alignment algorithm."><input type="checkbox" id="option-oldaxis"> <span>-oldaxis</span></label>
+                            <label title="Creates a .POR file, used in the BSP editor for leaky maps."><input type="checkbox" id="option-bspleak"> <span>-bspleak</span></label>
+                            <label title="Create an old-style QBSP .PTS file (default is new style)."><input type="checkbox" id="option-oldleak"> <span>-oldleak</span></label>
+                            <label title="Request output in bsp2 format."><input type="checkbox" id="option-bsp2"> <span>-bsp2</span></label>
+                        </div>
+                        <div class="options-grid inputs">
+                            <label title="Space between leakfile points (default 2)."><span>-leakdist</span> <input type="number" id="option-leakdist" placeholder="2"></label>
+                            <label title="Use different texture subdivision (default 240)."><span>-subdivide</span> <input type="number" id="option-subdivide" placeholder="240"></label>
+                        </div>
+                        <button id="forge-button">Forge BSP</button>
+                    </div>
+                </div>
+
+                <!-- LIGHT Tab -->
+                <div id="light-tab" class="tab-panel">
+                    <h2>LIGHT - Lighting Compiler</h2>
+                    <div class="tool-controls">
+                        <div class="file-input-group">
+                            <label for="bsp-file">BSP File:</label>
+                            <input type="file" id="bsp-file" accept=".bsp">
+                        </div>
+                        <div class="options-grid" title="LIGHT Options">
+                            <label title="Enable 2x2 oversampling for smoother lightmaps."><input type="checkbox" id="option-extra"> <span>-extra</span></label>
+                            <label title="Enable 4x4 oversampling for even smoother lightmaps."><input type="checkbox" id="option-extra4"> <span>-extra4</span></label>
+                            <label title="Adds minlight to all surfaces, instead of only clamping up to it."><input type="checkbox" id="option-addmin"> <span>-addmin</span></label>
+                            <label title="Force generation of a .lit file for colored lighting."><input type="checkbox" id="option-lit"> <span>-lit</span></label>
+                            <label title="Only generate a .lit file, do not modify the BSP."><input type="checkbox" id="option-litonly"> <span>-litonly</span></label>
+                        </div>
+                        <div class="options-grid inputs">
+                            <label title="Number of threads to use (default is auto-detected)."><span>-threads</span> <input type="number" id="option-threads" placeholder="auto"></label>
+                            <label title="Scale distance-based light attenuation (default 1.0)."><span>-dist</span> <input type="number" id="option-dist" step="0.1"></label>
+                            <label title="Scale the final light values (default 0.5)."><span>-range</span> <input type="number" id="option-range" step="0.1"></label>
+                            <label title="The brightness level at which lights fade to zero."><span>-gate</span> <input type="number" id="option-gate" step="0.001"></label>
+                            <label title="Set a minimum light level for all surfaces."><span>-light</span> <input type="number" id="option-light"></label>
+                            <label title="Soften shadow edges by averaging adjacent samples."><span>-soft</span> <input type="number" id="option-soft"></label>
+                            <label title="Scales the effect of surface angle on lighting (0.0-1.0)."><span>-anglescale</span> <input type="number" id="option-anglescale" step="0.1"></label>
+                        </div>
+                        <button id="light-button">Illuminate</button>
+                    </div>
+                </div>
+
+                <!-- VIS Tab -->
+                <div id="vis-tab" class="tab-panel">
+                    <h2>VIS - Visibility Compiler</h2>
+                    <div class="tool-controls">
+                        <div class="file-input-group">
+                            <label for="vis-bsp-file">BSP File:</label>
+                            <input type="file" id="vis-bsp-file" accept=".bsp">
+                        </div>
+                        <div class="file-input-group">
+                            <label for="prt-input">PRT File (optional):</label>
+                            <input type="file" id="prt-input" accept=".prt">
+                        </div>
+                        <div class="options-grid" title="VIS Options">
+                            <label title="Performs a faster, lower-quality vis compile."><input type="checkbox" id="option-fast"> <span>-fast</span></label>
+                            <label title="Enable verbose logging."><input type="checkbox" id="option-v"> <span>-v</span></label>
+                            <label title="Enable extra verbose logging."><input type="checkbox" id="option-vv"> <span>-vv</span></label>
+                            <label title="Use the debug build of the vis tool (slower, more checks)."><input type="checkbox" id="option-debug"> <span>-debug</span></label>
+                        </div>
+                        <div class="options-grid inputs">
+                             <label title="Set vis test level (0-4, default 4)."><span>-level</span> <input type="number" id="option-level" placeholder="4"></label>
+                             <label title="Number of threads to use (default is auto-detected)."><span>-threads</span> <input type="number" id="vis-option-threads" placeholder="auto"></label>
+                        </div>
+                        <button id="vis-button">Calculate PVS</button>
+                    </div>
+                </div>
+
+                <!-- Full Compile Tab -->
+                <div id="full-compile-tab" class="tab-panel">
+                    <h2>Full Compile (QBSP &rarr; LIGHT &rarr; VIS)</h2>
+                    <div class="tool-controls">
+                        <div class="file-input-group">
+                            <label for="full-map-file">MAP File:</label>
+                            <input type="file" id="full-map-file" accept=".map">
+                        </div>
+                        <div class="file-input-group">
+                            <label for="full-wad-files">WAD Files (optional):</label>
+                            <input type="file" id="full-wad-files" multiple accept=".wad">
+                        </div>
+
+                        <h4 class="options-header">QBSP Options</h4>
+                        <div class="options-grid" title="QBSP Options">
+                            <label title="Doesn't perform outside filling."><input type="checkbox" id="full-option-nofill"> <span>-nofill</span></label>
+                            <label title="Doesn't build clip hulls."><input type="checkbox" id="full-option-noclip"> <span>-noclip</span></label>
+                            <label title="Doesn't remove faces with the 'skip' texture."><input type="checkbox" id="full-option-noskip"> <span>-noskip</span></label>
+                            <label title="Only updates .MAP entities."><input type="checkbox" id="full-option-onlyents"> <span>-onlyents</span></label>
+                            <label title="Print out more .MAP information." checked><input type="checkbox" id="full-option-verbose"> <span>-verbose</span></label>
+                            <label title="Doesn't combine sky and water faces into one large face."><input type="checkbox" id="full-option-splitspecial"> <span>-splitspecial</span></label>
+                            <label title="Computes portal information for transparent sky."><input type="checkbox" id="full-option-transsky"> <span>-transsky</span></label>
+                            <label title="Uses original QBSP texture alignment algorithm."><input type="checkbox" id="full-option-oldaxis"> <span>-oldaxis</span></label>
+                            <label title="Creates a .POR file, used in the BSP editor for leaky maps."><input type="checkbox" id="full-option-bspleak"> <span>-bspleak</span></label>
+                            <label title="Create an old-style QBSP .PTS file (default is new style)."><input type="checkbox" id="full-option-oldleak"> <span>-oldleak</span></label>
+                            <label title="Request output in bsp2 format."><input type="checkbox" id="full-option-bsp2"> <span>-bsp2</span></label>
+                        </div>
+                        <div class="options-grid inputs">
+                            <label title="Space between leakfile points (default 2)."><span>-leakdist</span> <input type="number" id="full-option-leakdist" placeholder="2"></label>
+                            <label title="Use different texture subdivision (default 240)."><span>-subdivide</span> <input type="number" id="full-option-subdivide" placeholder="240"></label>
+                        </div>
+
+                        <h4 class="options-header">LIGHT Options</h4>
+                        <div class="options-grid" title="LIGHT Options">
+                            <label title="Enable 2x2 oversampling for smoother lightmaps."><input type="checkbox" id="full-option-extra"> <span>-extra</span></label>
+                            <label title="Enable 4x4 oversampling for even smoother lightmaps."><input type="checkbox" id="full-option-extra4"> <span>-extra4</span></label>
+                            <label title="Adds minlight to all surfaces, instead of only clamping up to it."><input type="checkbox" id="full-option-addmin"> <span>-addmin</span></label>
+                            <label title="Force generation of a .lit file for colored lighting."><input type="checkbox" id="full-option-lit"> <span>-lit</span></label>
+                            <label title="Only generate a .lit file, do not modify the BSP."><input type="checkbox" id="full-option-litonly"> <span>-litonly</span></label>
+                        </div>
+                        <div class="options-grid inputs">
+                            <label title="Number of threads to use (default is auto-detected)."><span>-threads</span> <input type="number" id="full-option-threads" placeholder="auto"></label>
+                            <label title="Scale distance-based light attenuation (default 1.0)."><span>-dist</span> <input type="number" id="full-option-dist" step="0.1"></label>
+                            <label title="Scale the final light values (default 0.5)."><span>-range</span> <input type="number" id="full-option-range" step="0.1"></label>
+                            <label title="The brightness level at which lights fade to zero."><span>-gate</span> <input type="number" id="full-option-gate" step="0.001"></label>
+                            <label title="Set a minimum light level for all surfaces."><span>-light</span> <input type="number" id="full-option-light"></label>
+                            <label title="Soften shadow edges by averaging adjacent samples."><span>-soft</span> <input type="number" id="full-option-soft"></label>
+                            <label title="Scales the effect of surface angle on lighting (0.0-1.0)."><span>-anglescale</span> <input type="number" id="full-option-anglescale" step="0.1"></label>
+                        </div>
+
+                        <h4 class="options-header">VIS Options</h4>
+                        <div class="options-grid" title="VIS Options">
+                            <label title="Performs a faster, lower-quality vis compile."><input type="checkbox" id="full-option-fast"> <span>-fast</span></label>
+                            <label title="Enable verbose logging."><input type="checkbox" id="full-option-v"> <span>-v</span></label>
+                            <label title="Enable extra verbose logging."><input type="checkbox" id="full-option-vv"> <span>-vv</span></label>
+                            <label title="Use the debug build of the vis tool (slower, more checks)."><input type="checkbox" id="full-option-debug"> <span>-debug</span></label>
+                        </div>
+                        <div class="options-grid inputs">
+                             <label title="Set vis test level (0-4, default 4)."><span>-level</span> <input type="number" id="full-option-level" placeholder="4"></label>
+                             <label title="Number of threads to use (default is auto-detected)."><span>-threads</span> <input type="number" id="full-vis-option-threads" placeholder="auto"></label>
+                        </div>
+
+                        <button id="full-compile-button" style="background-color: #28a745;">Run Full Compile</button>
+                    </div>
+                </div>
+
+                <!-- BSPInfo Tab -->
+                <div id="bspinfo-tab" class="tab-panel">
+                    <h2>BSPInfo - BSP Inspector</h2>
+                    <div class="tool-controls">
+                        <div class="file-input-group">
+                            <label for="bspinfo-bsp-file">BSP File:</label>
+                            <input type="file" id="bspinfo-bsp-file" accept=".bsp">
+                        </div>
+                        <div class="options-grid" title="BSPInfo Options">
+                            <label title="Print content stats."><input type="checkbox" id="info-contents"> <span>-contents</span></label>
+                            <label title="Print entity list."><input type="checkbox" id="info-entities"> <span>-entities</span></label>
+                            <label title="Print face list."><input type="checkbox" id="info-faces"> <span>-faces</span></label>
+                            <label title="Print model list."><input type="checkbox" id="info-models"> <span>-models</span></label>
+                            <label title="Print plane stats."><input type="checkbox" id="info-planes"> <span>-planes</span></label>
+                            <label title="Print texture list."><input type="checkbox" id="info-textures"> <span>-textures</span></label>
+                        </div>
+                        <button id="bspinfo-button">Get Info</button>
+                    </div>
+                </div>
+
+                <!-- BSPUtil Tab -->
+                <div id="bsputil-tab" class="tab-panel">
+                    <h2>BSPUtil - BSP Manipulator</h2>
+                    <div class="tool-controls">
+                        <div class="file-input-group">
+                            <label for="bsputil-bsp-file">BSP File:</label>
+                            <input type="file" id="bsputil-bsp-file" accept=".bsp">
+                        </div>
+                        <div class="options-grid" title="BSPUtil Options">
+                            <label title="Print information about the BSP file."><input type="checkbox" id="util-info"> <span>--info</span></label>
+                            <label title="Removes all face data from the BSP."><input type="checkbox" id="util-remove-faces"> <span>--remove-faces</span></label>
+                            <label title="Splits brushes at node boundaries."><input type="checkbox" id="util-split"> <span>--split</span></label>
+                            <label title="Checks for leaks in the map."><input type="checkbox" id="util-leak-check"> <span>--leak-check</span></label>
+                        </div>
+                        <div class="options-grid inputs">
+                            <label title="Removes a specific data lump from the BSP file."><span>--remove-lump</span> <input type="number" id="util-remove-lump" placeholder="lump #"></label>
+                            <label title="Converts the BSP to a different format (e.g., bsp2)."><span>--convert</span> <input type="text" id="util-convert" placeholder="bsp2"></label>
+                        </div>
+                        <div class="options-grid inputs">
+                            <label title="Merges the contents of another BSP file into the input file."><span>--merge</span> <input type="file" id="util-merge-file" accept=".bsp"></label>
+                        </div>
+                        <div class="file-input-group">
+                            <label for="util-output-name">Output Filename (optional):</label>
+                            <input type="text" id="util-output-name" placeholder="modified.bsp">
+                        </div>
+                        <button id="bsputil-button">Run Util</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="output-section">
+            <h3>Log</h3>
+            <pre id="log-output"></pre>
+            <div id="download-container"></div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+
+</body>
+</html>
